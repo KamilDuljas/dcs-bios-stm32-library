@@ -95,18 +95,25 @@ do not come with their own build system, we are just putting everything into the
 #ifdef DCSBIOS_DEFAULT_SERIAL
 	namespace DcsBios {
 		ProtocolParser parser;
-		void setup() {
-			Serial.begin(250000);
+		UART_HandleTypeDef *huartPtr = NULL;
+		void setup(UART_HandleTypeDef *huart) {
+			huartPtr = huart;
 		}
 		void loop() {
-			while (Serial.available()) {
-				parser.processChar(Serial.read());
+			uint8_t buffer = 0;
+			while(HAL_UART_Receive(huartPtr, &buffer, 1, 50) == HAL_OK)
+			{
+				parser.processChar(buffer);
 			}
 			PollingInput::pollInputs();
-			ExportStreamListener::loopAll();			
+			ExportStreamListener::loopAll();
 		}
 		bool tryToSendDcsBiosMessage(const char* msg, const char* arg) {
-			Serial.write(msg); Serial.write(' '); Serial.write(arg); Serial.write('\n');
+			HAL_UART_Transmit(huartPtr, (uint8_t*)msg, strlen(msg), HAL_MAX_DELAY);
+			HAL_UART_Transmit(huartPtr, (uint8_t*)" ", 1, HAL_MAX_DELAY);
+			HAL_UART_Transmit(huartPtr, (uint8_t*)arg, strlen(arg), HAL_MAX_DELAY);
+			HAL_UART_Transmit(huartPtr, (uint8_t*)"\r\n", 2, HAL_MAX_DELAY);
+
 			DcsBios::PollingInput::setMessageSentOrQueued();
 			return true;
 		}
@@ -131,6 +138,10 @@ do not come with their own build system, we are just putting everything into the
 #include "internal/MatrixSwitches.h"
 #include "internal/DualModeButton.h"
 
+long map(long x, long in_min, long in_max, long out_min, long out_max)
+{
+  return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
+}
 namespace DcsBios {
 	template<unsigned int first, unsigned int second>
 	unsigned int piecewiseMap(unsigned int newValue) {
