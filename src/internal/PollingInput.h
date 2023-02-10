@@ -1,7 +1,7 @@
 #ifndef __DCSBIOS_POLLINGINPUT_H
 #define __DCSBIOS_POLLINGINPUT_H
 
-#include "Arduino.h"
+#include <stdio.h>
 
 bool tryToSendDcsBiosMessage(const char* msg, const char* args);
 
