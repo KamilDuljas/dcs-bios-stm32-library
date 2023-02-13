@@ -1,7 +1,7 @@
 #ifndef __DCSBIOS_BUTTONS_H
 #define __DCSBIOS_BUTTONS_H
 
-#include "Arduino.h"
+#include "stm32l4xx_hal_gpio.h"
 
 namespace DcsBios {
 	template <unsigned long pollIntervalMs = POLL_EVERY_TIME>
@@ -9,7 +9,8 @@ namespace DcsBios {
 		private:
 			const char* msg_;
 			const char* arg_;
-			char pin_;
+			GPIO_TypeDef* gpioPort_;
+			uint16_t gpioPin_;
 			char lastState_;
 
 			void resetState()
@@ -18,23 +19,23 @@ namespace DcsBios {
 			}
 
 			void pollInput() {
-				char state = digitalRead(pin_);
+				char state = HAL_GPIO_ReadPin(gpioPort_, gpioPin_);
 				if (state != lastState_) {
-					if (lastState_ == HIGH && state == LOW) {
+					if (lastState_ == GPIO_PIN_SET && state == GPIO_PIN_RESET) {
 						while(!tryToSendDcsBiosMessage(msg_, arg_));
 					}
 					lastState_ = state;
 				}
 			}
 		public:
-			ActionButtonT(const char* msg, const char* arg, char pin)	 :
+			ActionButtonT(const char* msg, const char* arg,  GPIO_TypeDef* gpioPort, uint16_t gpioPin)	 :
 				PollingInput(pollIntervalMs)
 			{
 				msg_ = msg;
 				arg_ = arg;
-				pin_ = pin;
-				pinMode(pin_, INPUT_PULLUP);
-				lastState_ = digitalRead(pin_);
+				gpioPort_ = gpioPort;
+				gpioPin_ = gpioPin;
+				lastState_ = HAL_GPIO_ReadPin(gpioPort_, gpioPin_);
 			}
 
 			void SetControl( const char* msg )
@@ -55,7 +56,8 @@ namespace DcsBios {
 			const char* msg_;
 			const char* arg_A;
 			const char* arg_B;
-			char pin_;
+			GPIO_TypeDef* gpioPort_;
+			uint16_t gpioPin_;
 			char lastState_;
 			bool phase_;
 
@@ -65,9 +67,9 @@ namespace DcsBios {
 			}
 
 			void pollInput() {
-				char state = digitalRead(pin_);
+				char state = HAL_GPIO_ReadPin(gpioPort_, gpioPin_);
 				if (state != lastState_) {
-					if (lastState_ == HIGH && state == LOW) {
+					if (lastState_ == GPIO_PIN_SET && state == GPIO_PIN_RESET) {
 						// Rising edge
 						while(!tryToSendDcsBiosMessage(msg_, phase_?arg_A:arg_B));
 						phase_ = !phase_;
@@ -76,16 +78,16 @@ namespace DcsBios {
 				}
 			}
 		public:
-			ToggleButtonT(const char* msg, const char* argA, const char* argB, char pin)	 :
+			ToggleButtonT(const char* msg, const char* argA, const char* argB, GPIO_TypeDef* gpioPort, uint16_t gpioPin)	 :
 				PollingInput(pollIntervalMs)
 			{
 				msg_ = msg;
 				arg_A = argA;
 				arg_B = argB;
-				pin_ = pin;
+				gpioPort_ = gpioPort;
+				gpioPin_ = gpioPin;
 				phase_ = false;
-				pinMode(pin_, INPUT_PULLUP);
-				lastState_ = digitalRead(pin_);
+				lastState_ = HAL_GPIO_ReadPin(gpioPort_, gpioPin_);
 			}
 
 			void SetControl( const char* msg )
@@ -117,7 +119,7 @@ namespace DcsBios {
 				char state = *address;
 				if (state != lastState_) {
 					//only active if pin goes from HIGH to LOW
-					if (lastState_ == HIGH && state == LOW) {
+					if (lastState_ == GPIO_PIN_SET && state == GPIO_PIN_RESET) {
 						while(!tryToSendDcsBiosMessage(msg_, arg_));
 					}
 					lastState_ = state;
