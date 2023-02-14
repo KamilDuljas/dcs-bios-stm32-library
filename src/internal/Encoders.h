@@ -12,20 +12,18 @@ namespace DcsBios {
 		EIGHT_STEPS_PER_DETENT = 8,
 	};
 
-	template <unsigned long pollIntervalMs = POLL_EVERY_TIME, StepsPerDetent stepsPerDetent = ONE_STEP_PER_DETENT>
+	// Rotary encoder based on timer and built-in encoder mode
+	template <unsigned long pollIntervalMs = POLL_EVERY_TIME, StepsPerDetent stepsPerDetent = TWO_STEPS_PER_DETENT>
 	class RotaryEncoderT : PollingInput, public ResettableInput {
 	private:
 		const char* msg_;
 		const char* decArg_;
 		const char* incArg_;
-		GPIO_TypeDef* gpio1Port_;
-		uint16_t gpio1Pin_;
-		GPIO_TypeDef* gpio2Port_;
-		uint16_t gpio2Pin_;
+		TIM_HandleTypeDef* tim_;
 		char lastState_;
 		signed char delta_;
 		char readState() {
-			return (HAL_GPIO_ReadPin(gpio1Port_, gpio1Pin_) << 1) | HAL_GPIO_ReadPin(gpio2Port_, gpio2Pin_);
+			return __HAL_TIM_GET_COUNTER(tim_);
 		}
 		void resetState()
 		{
@@ -33,23 +31,13 @@ namespace DcsBios {
 		}
 		void pollInput() {
 			char state = readState();
-			switch(lastState_) {
-				case 0:
-					if (state == 2) delta_--;
-					if (state == 1) delta_++;
-					break;
-				case 1:
-					if (state == 0) delta_--;
-					if (state == 3) delta_++;
-					break;
-				case 2:
-					if (state == 3) delta_--;
-					if (state == 0) delta_++;
-					break;
-				case 3:
-					if (state == 1) delta_--;
-					if (state == 2) delta_++;
-					break;
+			if (lastState_ < state)
+			{
+				delta_++;
+			}
+			else if (lastState_ > state)
+			{
+				delta_--;
 			}
 			lastState_ = state;
 			
@@ -63,17 +51,13 @@ namespace DcsBios {
 			}
 		}
 	public:
-		RotaryEncoderT(const char* msg, const char* decArg, const char* incArg, GPIO_TypeDef* gpio1Port, uint16_t gpio1Pin,
-		GPIO_TypeDef* gpio2Port, uint16_t gpio2Pin) :
+		RotaryEncoderT(const char* msg, const char* decArg, const char* incArg, TIM_HandleTypeDef* tim) :
 			PollingInput(pollIntervalMs) {
 			msg_ = msg;
 			decArg_ = decArg;
 			incArg_ = incArg;
-			gpio1Port_ = gpio1Port;
-			gpio1Pin_ = gpio1Pin;
-			gpio2Port_ = gpio2Port;
-			gpio2Pin_ = 
 			delta_ = 0;
+			tim_ = tim;
 			lastState_ = readState();
 		}
 
