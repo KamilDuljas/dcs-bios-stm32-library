@@ -1,7 +1,7 @@
 #ifndef __DCSBIOS_EXPORTSTREAMLISTENER_H
 #define __DCSBIOS_EXPORTSTREAMLISTENER_H
-
-#include "Arduino.h"
+#include <stdint.h>
+#include "stm32l4xx_hal.h"
 
 namespace DcsBios {
 	class ExportStreamListener {
@@ -21,9 +21,9 @@ namespace DcsBios {
 				this->lastAddressOfInterest = lastAddressOfInterest & ~(0x01);
 				
 				// nothing in the list? insert self as first element.
-				if (firstExportStreamListener == NULL) {
+				if (firstExportStreamListener == nullptr) {
 					firstExportStreamListener = this;
-					nextExportStreamListener = NULL;
+					nextExportStreamListener = nullptr;
 					return;
 				}
 				
@@ -79,10 +79,10 @@ namespace DcsBios {
 			bool hasUpdatedData() { return (this->flags & DIRTY); }
 			unsigned int getData() {
 				uint16_t ret;
-				noInterrupts();
+				__disable_irq();
 				ret = data;
 				flags &= ~(DIRTY); // clear dirty bit
-				interrupts();
+				__enable_irq();
 				
 				return ret;
 			}
@@ -147,11 +147,11 @@ namespace DcsBios {
 			}
 			virtual void onConsistentData() {
 				if (receivingDirty) {
-					noInterrupts();
+					__disable_irq();
 					memcpy(userBuffer, receivingBuffer, LENGTH);
 					receivingDirty = false;
 					userDirty = true;
-					interrupts();
+					__enable_irq();
 				}
 			}
 			bool hasUpdatedData() {

@@ -30,7 +30,7 @@ namespace DcsBios {
 				PollingInput* pi = firstPollingInput;
 				if (!pi) return;
 
-				unsigned long now = millis();
+				unsigned long now = HAL_GetTick();
 				
 				PollingInput* lastSender = NULL;
 				do { // step through circular linked list
