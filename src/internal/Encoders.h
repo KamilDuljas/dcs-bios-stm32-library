@@ -1,8 +1,8 @@
 #ifndef __DCSBIOS_ENCODERS_H
 #define __DCSBIOS_ENCODERS_H
 
-#include "Arduino.h"
 #include "PollingInput.h"
+#include "stm32l4xx_hal.h"
 
 namespace DcsBios {
 	enum StepsPerDetent {
@@ -18,12 +18,14 @@ namespace DcsBios {
 		const char* msg_;
 		const char* decArg_;
 		const char* incArg_;
-		char pinA_;
-		char pinB_;
+		GPIO_TypeDef* gpio1Port_;
+		uint16_t gpio1Pin_;
+		GPIO_TypeDef* gpio2Port_;
+		uint16_t gpio2Pin_;
 		char lastState_;
 		signed char delta_;
 		char readState() {
-			return (digitalRead(pinA_) << 1) | digitalRead(pinB_);
+			return (HAL_GPIO_ReadPin(gpio1Port_, gpio1Pin_) << 1) | HAL_GPIO_ReadPin(gpio2Port_, gpio2Pin_);
 		}
 		void resetState()
 		{
@@ -61,15 +63,16 @@ namespace DcsBios {
 			}
 		}
 	public:
-		RotaryEncoderT(const char* msg, const char* decArg, const char* incArg, char pinA, char pinB) :
+		RotaryEncoderT(const char* msg, const char* decArg, const char* incArg, GPIO_TypeDef* gpio1Port, uint16_t gpio1Pin,
+		GPIO_TypeDef* gpio2Port, uint16_t gpio2Pin) :
 			PollingInput(pollIntervalMs) {
 			msg_ = msg;
 			decArg_ = decArg;
 			incArg_ = incArg;
-			pinA_ = pinA;
-			pinB_ = pinB;
-			pinMode(pinA_, INPUT_PULLUP);
-			pinMode(pinB_, INPUT_PULLUP);
+			gpio1Port_ = gpio1Port;
+			gpio1Pin_ = gpio1Pin;
+			gpio2Port_ = gpio2Port;
+			gpio2Pin_ = 
 			delta_ = 0;
 			lastState_ = readState();
 		}
@@ -85,7 +88,7 @@ namespace DcsBios {
 		}
 	};
 	typedef RotaryEncoderT<> RotaryEncoder;
-
+/*
 	template <unsigned long pollIntervalMs = POLL_EVERY_TIME, StepsPerDetent stepsPerDetent = ONE_STEP_PER_DETENT>
 	class RotaryAcceleratedEncoderT : PollingInput, public ResettableInput {
     private:
@@ -168,7 +171,7 @@ namespace DcsBios {
 					cw_momentum_--;
 				}
 			}else{
-				if( (millis() - timeLastDetent_) > STOPPED_THRESHOLD_MS )
+				if( (HAL_GetTick() - timeLastDetent_) > STOPPED_THRESHOLD_MS )
 				cw_momentum_ = 0;
 			}
 
@@ -176,7 +179,7 @@ namespace DcsBios {
 			
 			if (delta_ >= stepsPerDetent) {
 				const char *arg;
-				if( (millis() - timeLastDetent_) < FAST_THRESHOLD_MS )
+				if( (HAL_GetTick() - timeLastDetent_) < FAST_THRESHOLD_MS )
 					arg = fastIncArg_;
 				else
 					arg = incArg_;
@@ -184,12 +187,12 @@ namespace DcsBios {
 				{
 					delta_ -= stepsPerDetent;
 					//delta_ = 0;
-					timeLastDetent_ = millis();
+					timeLastDetent_ = HAL_GetTick();
 				}
 			}
 			else if (delta_ <= -stepsPerDetent) {
 				const char *arg;
-				if( (millis() - timeLastDetent_) < FAST_THRESHOLD_MS )
+				if( (HAL_GetTick() - timeLastDetent_) < FAST_THRESHOLD_MS )
 					arg = fastDecArg_;
 				else
 					arg = decArg_;
@@ -197,7 +200,7 @@ namespace DcsBios {
 				{
 					delta_ += stepsPerDetent;
 					//delta_ = 0;
-					timeLastDetent_ = millis();
+					timeLastDetent_ = HAL_GetTick();
 				}
 			}
 		}
@@ -216,7 +219,7 @@ namespace DcsBios {
 			pinMode(pinB_, INPUT_PULLUP);
 			delta_ = 0;
 			lastState_ = readState();
-			timeLastDetent_ = millis();
+			timeLastDetent_ = HAL_GetTick();
 			cw_momentum_ = 0;
 		}
         
@@ -390,6 +393,7 @@ namespace DcsBios {
 		}
 	};
 	typedef EmulatedConcentricRotaryEncoderT<> EmulatedConcentricRotaryEncoder;
+	*/
 }
 
 #endif
