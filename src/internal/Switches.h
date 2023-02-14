@@ -2,7 +2,6 @@
 #define __DCSBIOS_SWITCHES_H
 
 #include <math.h>
-#include "Arduino.h"
 
 namespace DcsBios {
 	template <unsigned long pollIntervalMs = POLL_EVERY_TIME>
@@ -10,7 +9,8 @@ namespace DcsBios {
 	{
 	private:
 		const char* msg_;
-		char pin_;
+		GPIO_TypeDef* gpioPort_;
+		uint16_t gpioPin_;
 		char debounceSteadyState_;
 		char lastState_;
 		bool reverse_;
@@ -23,10 +23,10 @@ namespace DcsBios {
 		}
 
 		void pollInput() {
-			char state = digitalRead(pin_);
+			char state = HAL_GPIO_ReadPin(gpioPort_, gpioPin_);
 			if (reverse_) state = !state;
 
-			unsigned long now = millis();
+			unsigned long now = HAL_GetTick();
 
 			if (state != debounceSteadyState_) {
 				lastDebounceTime = now;
@@ -35,23 +35,22 @@ namespace DcsBios {
 			
 			if ((now - lastDebounceTime) >= debounceDelay_) {
 				if (debounceSteadyState_ != lastState_) {
-					if (tryToSendDcsBiosMessage(msg_, state == HIGH ? "0" : "1")) {
+					if (tryToSendDcsBiosMessage(msg_, state == GPIO_PIN_SET ? "0" : "1")) {
 						lastState_ = debounceSteadyState_;
 					}
 				}
 			}			
 		}
 	public:
-		Switch2PosT(const char* msg, char pin, bool reverse = false, unsigned long debounceDelay = 50) :
+		Switch2PosT(const char* msg, GPIO_TypeDef* gpioPort, uint16_t gpioPin, bool reverse = false, unsigned long debounceDelay = 50) :
 			PollingInput(pollIntervalMs)
 		{ 
 			msg_ = msg;
-			pin_ = pin;
-			pinMode(pin_, INPUT_PULLUP);
+			gpioPort_ = gpioPort;
+			gpioPin_ = gpioPin;
 			debounceDelay_ = debounceDelay;
 			reverse_ = reverse;
-
-			lastState_ = digitalRead(pin_);
+			lastState_ = HAL_GPIO_ReadPin(gpioPort_, gpioPin_);
 			if (reverse_) lastState_ = !lastState_;			
 		}
 				
@@ -66,14 +65,15 @@ namespace DcsBios {
 		}
 	};
 	typedef Switch2PosT<> Switch2Pos;
-
+/*
 	template <unsigned long pollIntervalMs = POLL_EVERY_TIME, unsigned long coverDelayMs = 200>
 	class SwitchWithCover2PosT : PollingInput, public ResettableInput
 	{
 	private:
 		const char* switchMsg_;
 		const char* coverMsg_;
-		char pin_;
+		GPIO_TypeDef* gpioPort_;
+		uint16_t gpioPin_;
 		char lastState_;
 		char switchState_;
 		bool reverse_;
@@ -97,21 +97,21 @@ namespace DcsBios {
 				switchCoverState_ = stOFF_CLOSED;
 			else
 				switchCoverState_ = stON_OPEN;
-			lastSwitchStateTime = millis();
+			lastSwitchStateTime = HAL_GetTick();
 		}
 
 		void pollInput() {
-			char state = digitalRead(pin_);
+			char state = HAL_GPIO_ReadPin(gpioPort_, gpioPin_);
 			if (reverse_) state = !state;
 			if (state != lastState_) {
-				lastDebounceTime = millis();
+				lastDebounceTime = HAL_GetTick();
 			}
 			
 			if (state != switchState_ && 
-				(millis() - lastDebounceTime) > debounceDelay_) 
+				(HAL_GetTick() - lastDebounceTime) > debounceDelay_) 
 			{
 				// Switch has debounced and changed state
-				if( millis() - lastSwitchStateTime > coverDelayMs )
+				if( HAL_GetTick() - lastSwitchStateTime > coverDelayMs )
 				{
 					// Switch/cover delay has been satisfied.
 					if( state )
@@ -123,7 +123,7 @@ namespace DcsBios {
 								if (tryToSendDcsBiosMessage(switchMsg_, "0"))
 								{
 									switchCoverState_ = stOFF_OPEN;
-									lastSwitchStateTime = millis();
+									lastSwitchStateTime = HAL_GetTick();
 								}
 								break;
 
@@ -131,7 +131,7 @@ namespace DcsBios {
 								if (tryToSendDcsBiosMessage(coverMsg_, "0"))
 								{
 									switchCoverState_ = stOFF_CLOSED;
-									lastSwitchStateTime = millis();
+									lastSwitchStateTime = HAL_GetTick();
 									switchState_ = state;									
 								}
 								break;
@@ -150,7 +150,7 @@ namespace DcsBios {
 								if (tryToSendDcsBiosMessage(coverMsg_, "1"))
 								{
 									switchCoverState_ = stOFF_OPEN;
-									lastSwitchStateTime = millis();
+									lastSwitchStateTime = HAL_GetTick();
 								}
 								break;
 
@@ -158,7 +158,7 @@ namespace DcsBios {
 								if (tryToSendDcsBiosMessage(switchMsg_, "1"))
 								{
 									switchCoverState_ = stON_OPEN;
-									lastSwitchStateTime = millis();
+									lastSwitchStateTime = HAL_GetTick();
 									switchState_ = state;
 								}
 								break;
@@ -183,7 +183,7 @@ namespace DcsBios {
 			coverMsg_ = coverMessage;
 			pin_ = pin;
 			pinMode(pin_, INPUT_PULLUP);
-			switchState_ = digitalRead(pin_);
+			switchState_ = HAL_GPIO_ReadPin(gpioPort_, gpioPin_);
 			lastState_ = switchState_;
 			reverse_ = reverse;
 			debounceDelay_ = debounceDelay;
@@ -221,7 +221,7 @@ namespace DcsBios {
 		}
 		void pollInput() {
 			char state = readState();
-			unsigned long now = millis();
+			unsigned long now = HAL_GetTick();
 			if (state != debounceSteadyState_) {
 				lastDebounceTime = now;
 				debounceSteadyState_ = state;
@@ -338,6 +338,7 @@ namespace DcsBios {
 		}
 	};
 	typedef SwitchMultiPosT<> SwitchMultiPos;
+*/
 }
 
 #endif	
