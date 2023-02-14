@@ -103,7 +103,7 @@ do not come with their own build system, we are just putting everything into the
 		}
 		void loop() {
 			uint8_t buffer = 0;
-			while(HAL_UART_Receive(huartPtr, &buffer, 1, 50) == HAL_OK)
+			while(HAL_UART_Receive(huartPtr, &buffer, 1, 10) == HAL_OK)
 			{
 				parser.processChar(buffer);
 			}
