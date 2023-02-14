@@ -1,7 +1,7 @@
-#include "Protocol.h"
-#include "PollingInput.h"
-#include "ExportStreamListener.h"
-#include "RingBuffer.h"
+#include "internal\Protocol.h"
+#include "internal\PollingInput.h"
+#include "internal\ExportStreamListener.h"
+#include "internal\RingBuffer.h"
 
 namespace DcsBios {
 	ExportStreamListener* ExportStreamListener::firstExportStreamListener = NULL;
@@ -29,10 +29,10 @@ namespace DcsBios {
 				return;
 			}
 			unsigned char nextByte = incomingDataBuffer.get();
-			interrupts();
+			__enable_irq();
 			processChar(nextByte);
 #ifdef DCSBIOS_RS485_SLAVE
-			noInterrupts();
+			__disable_irq();
 #endif
 		}
 	}
